@@ -1,0 +1,172 @@
+import sys
+import math
+import numpy as np
+import matplotlib.pyplot as plt
+import random
+import json
+import re
+import time
+from scipy.stats import pearsonr
+from sklearn import linear_model, datasets
+from sklearn import svm
+from sklearn import cross_validation
+from sklearn.metrics import roc_auc_score,precision_recall_curve
+from sklearn.cross_validation import KFold
+from sklearn.metrics import mean_squared_error
+from sklearn.cross_validation import StratifiedKFold
+from sklearn.metrics import precision_recall_fscore_support
+from matplotlib.colors import LinearSegmentedColormap
+from datetime import date
+import calendar
+from dateutil.parser import parse
+from sklearn import preprocessing
+from sklearn.feature_extraction import DictVectorizer
+from sklearn.metrics import classification_report
+#------------------------------------------------------------------------------------------------------------------------------
+
+np.random.seed(seed=0)
+
+def main():
+	# Remove stop words
+	file_p={}
+	file_p[0]=open('BingHackathonTrainingData.txt','r')
+	file_p[1]=open('BingHackathonTestData.txt','r')
+	word_dic={}
+	for key in file_p.keys():
+		for line in file_p[key]:
+			if not line:
+				print 'yes'
+				continue
+			lis=line.strip().split('\t')
+			# Author
+			author_lis=lis[3].split(';')
+			for author in author_lis:
+				tok_lis=author.split(' ')
+				for tok in tok_lis:
+					if tok not in word_dic:
+						word_dic[tok]=0
+					word_dic[tok]+=1
+			# Title
+			tok_lis=lis[4].split(' ')
+			for tok in tok_lis:
+				if tok not in word_dic:
+					word_dic[tok]=0
+				word_dic[tok]+=1
+			# Sen
+			sen_lis=lis[5].split('.')
+			for sen in sen_lis:
+				tok_lis=sen.split(' ')
+				for tok in tok_lis:
+					if tok not in word_dic:
+						word_dic[tok]=0
+					word_dic[tok]+=1
+	#print sorted(word_dic.items(),key=lambda x: x[1],reverse=True)[:100]
+	word_dic_final={}
+	for key,value in word_dic.items():
+		if value<400 and value>5:
+		#if True:
+			word_dic_final[key]=1
+	print len(word_dic_final)
+	# craete features
+	token_lis=[]
+	Y=[]
+	file_p[0]=open('BingHackathonTrainingData.txt','r')
+	file_p[1]=open('BingHackathonTestData.txt','r')
+	for key in file_p.keys():
+		for line in file_p[key]:
+			if not line:
+				print 'yes'
+				continue
+			lis=line.strip().split('\t')
+			sen_lis=lis[5].split('.')
+			temp_dic={}
+			for sen in sen_lis:
+				tok_lis=sen.split(' ')
+				for tok in tok_lis:
+					if tok==' ':
+						print 'yes'
+						continue
+					if tok in word_dic_final:
+						if tok not in temp_dic:
+							temp_dic[tok]=0
+						temp_dic[tok]+=1
+			# Author
+			author_lis=lis[3].split(';')
+			for author in author_lis:
+				tok_lis=author.split(' ')
+				for tok in tok_lis:
+					if tok in word_dic_final:
+						if tok not in temp_dic:
+							temp_dic[tok]=0
+						temp_dic[tok]+=1
+			# Title
+			tok_lis=lis[4].split(' ')
+			for tok in tok_lis:
+				if tok in word_dic_final:
+					if tok not in temp_dic:
+						temp_dic[tok]=0
+					temp_dic[tok]+=1
+			token_lis.append(temp_dic)
+			Y.append(int(lis[2]))
+	v = DictVectorizer(sparse=True)
+	X = v.fit_transform(token_lis)
+	print X.shape
+	X_train=X[:4497,:]
+	X_test=X[4498:,:]
+	Y_train=np.array(Y[:4497])
+	print len(np.where(Y_train==0)[0])
+	print len(np.where(Y_train==1)[0])
+	print len(np.where(Y_train==2)[0])
+	'''
+	print X.shape
+	print X_train.shape
+	print X_test.shape
+	print Y_train.shape
+	print Y_test.shape
+	'''
+	
+	# Classification
+	classify(X_train,X_test,Y_train)
+
+#------------------------------------------------------------------------------------------------------------------------------
+def classify(X_train,X_test,Y_train):
+	skf=StratifiedKFold(Y_train, n_folds=5, random_state=1)
+	min_mt=1000000
+	for c in np.linspace(.001,10,10):
+		for i,(train,test) in enumerate(skf):
+			#print len(np.where(Y_train[train]==0)[0])
+			#print len(np.where(Y_train[train]==1)[0])
+			#print len(np.where(Y_train[train]==2)[0])
+			X_train1=X_train[train,:]
+			X_test1=X_train[test,:]
+			Y_train1=Y_train[train]
+			Y_test1=Y_train[test]
+			# SVM
+			clf = svm.SVR(C=c,degree=2)
+			clf.fit(X_train1, Y_train1)
+			#clf = linear_model.LogisticRegression(C=1)
+			#clf.fit(X_train1, Y_train1)
+			pred_train=clf.predict(X_train1)
+			pred_test=clf.predict(X_test1)
+			m = mean_squared_error(pred_train, Y_train1)
+			mt = mean_squared_error(pred_test, Y_test1)
+			print str(mt)+'  '+str(c)
+		#print sum(prec)/15.0,sum(rec)/15.0,
+		if mt < min_mt:
+			min_mt=mt
+			max_c=c
+		#print sum(fmes)/15.0
+		#print [j/5 for j in prec],[j/5 for j in rec],[j/5 for j in fmes]
+	print min_mt,max_c
+	f2 = open('testReg','w')
+	clf = svm.SVR(C=max_c,degree=2)
+        clf.fit(X_train, Y_train)
+	p = clf.predict(X_test)
+	p = np.around(p)
+	i = 5001
+	for k in p:
+		f2.write(str(i)+'\t'+str(k)+'\n')
+		i =i+1
+
+if __name__ == '__main__':
+	main()
