@@ -1,0 +1,123 @@
+import sys
+import math
+import numpy as np
+import matplotlib.pyplot as plt
+import random
+import json
+import re
+import time
+from sklearn.naive_bayes import GaussianNB
+from sklearn.decomposition import PCA
+from scipy.stats import pearsonr
+from sklearn import linear_model, datasets
+from sklearn.lda import LDA
+from sklearn import svm
+from sklearn import cross_validation
+from sklearn.metrics import roc_auc_score,precision_recall_curve
+from sklearn.cross_validation import KFold
+from sklearn.cross_validation import StratifiedKFold
+from sklearn.metrics import precision_recall_fscore_support
+from matplotlib.colors import LinearSegmentedColormap
+from datetime import date
+import calendar
+from dateutil.parser import parse
+from sklearn import preprocessing
+from sklearn.feature_extraction import DictVectorizer
+from sklearn.metrics import classification_report
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfTransformer
+import itertools
+#------------------------------------------------------------------------------------------------------------------------------
+
+np.random.seed(seed=0)
+
+
+def main():
+	# Remove stop words
+	file_p={}
+	file_p[0]=open('BingHackathonTrainingData.txt','r')
+	file_p[1]=open('BingHackathonTestData.txt','r')
+	YA = [] 
+	YY = []
+	summary = []
+	
+	for key in file_p.keys():
+		for line in file_p[key]:
+			if not line:
+				print 'yes'
+				continue
+			lis=line.strip().split('\t')
+			s = ''
+			for i in lis[3].split(';'):
+				s = s + ' ' + i
+			s = s + ' ' + lis[4]
+			for i in lis[5].split('.'):
+   				s = s + ' ' + i
+			summary.append(s)
+			YA.append(int(lis[1]))
+			YY.append(int(lis[2]))
+			
+	
+	print 'summary - ',len(summary)
+
+	count_vect = CountVectorizer(max_df=400, min_df=7)
+	summary = count_vect.fit_transform(summary)
+	
+	print 'after count vector'
+	print 'summary - ',summary.shape
+	
+	tf_transformer = TfidfTransformer(use_idf=True).fit(summary)
+	summary = tf_transformer.transform(summary)
+	
+
+	print 'after TF-IDF vector'
+	print 'summary - ',summary.shape
+	
+	X = summary
+	X =X.toarray()
+	#pca = PCA(n_components=4000)
+	#pca.fit(X)
+	#X = pca.transform(X)	
+	X_train=X[:4498,:]
+	X_test=X[4498:,:]
+	print 'len of YA'
+	print len(YA)
+	YA_train=np.array(YA[:4498])
+	YA_test = np.array(YA[4498:])
+	YY_train=np.array(YY[:4498])
+	YY_test = np.array(YY[4498:])
+	print 'len of Y'
+	print len(np.where(YA_train==0)[0])
+	print len(np.where(YA_train==1)[0])
+	print len(np.where(YA_train==2)[0])
+	'''
+	print X.shape
+	print X_train.shape
+	print X_test.shape
+	print Y_train.shape
+	print Y_test.shape
+	'''
+	
+	# Classification
+	#classify(np.array(X_train),np.array(X_test),YA_train)
+	classify(X_train,X_test,YA_train)
+
+#------------------------------------------------------------------------------------------------------------------------------
+def classify(X_train,X_test,Y_train):
+	f2 = open('testFinal','w');	
+        k = 1
+	max_p = 0
+        ind = 0
+ 	#clf = LDA()
+	#	clf.fit(X_train,X_test);
+        #p = clf.decision_function(X_train)
+	clf = GaussianNB()
+	clf.fit(X_train, Y_train)  # GaussianNB itself does not support sample-weights
+	p = clf.predict_proba(X_train)
+
+   	for ind in p:
+	        f2.write(str(ind)+'\n')
+
+	
+if __name__ == '__main__':
+	main()
