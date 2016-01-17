@@ -1,0 +1,152 @@
+import sys
+import math
+import numpy as np
+import matplotlib.pyplot as plt
+import random
+import json
+import re
+import time
+from sklearn.decomposition import PCA
+from scipy.stats import pearsonr
+from sklearn import linear_model, datasets
+from sklearn.metrics import mean_squared_error
+from sklearn import svm
+from sklearn import cross_validation
+from sklearn.metrics import roc_auc_score,precision_recall_curve
+from sklearn.cross_validation import KFold
+from sklearn.cross_validation import StratifiedKFold
+from sklearn.metrics import precision_recall_fscore_support
+from matplotlib.colors import LinearSegmentedColormap
+from datetime import date
+import calendar
+from dateutil.parser import parse
+from sklearn import preprocessing
+from sklearn.feature_extraction import DictVectorizer
+from sklearn.metrics import classification_report
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfTransformer
+import itertools
+#------------------------------------------------------------------------------------------------------------------------------
+
+np.random.seed(seed=0)
+
+
+def main():
+	# Remove stop words
+	file_p={}
+	file_p[0]=open('BingHackathonTrainingData.txt','r')
+	file_p[1]=open('BingHackathonTestData.txt','r')
+	YA = [] 
+	YY = []
+	summary = []
+	
+	for key in file_p.keys():
+		for line in file_p[key]:
+			if not line:
+				print 'yes'
+				continue
+			lis=line.strip().split('\t')
+			s = ''
+			for i in lis[3].split(';'):
+				s = s + ' ' + i
+			s = s + ' ' + lis[4]
+			for i in lis[5].split('.'):
+   				s = s + ' ' + i
+			summary.append(s)
+			YA.append(int(lis[1]))
+			YY.append(int(lis[2]))
+			
+	
+	print 'summary - ',len(summary)
+
+	count_vect = CountVectorizer(max_df=400, min_df=7)
+	summary = count_vect.fit_transform(summary)
+	
+	print 'after count vector'
+	print 'summary - ',summary.shape
+	
+	tf_transformer = TfidfTransformer(use_idf=True).fit(summary)
+	summary = tf_transformer.transform(summary)
+	
+
+	print 'after TF-IDF vector'
+	print 'summary - ',summary.shape
+	
+	X = summary
+	X =X.toarray()
+	#pca = PCA(n_components=4000)
+	#pca.fit(X)
+	#X = pca.transform(X)	
+	X_train=X[:4498,:]
+	X_test=X[4498:,:]
+	print 'len of YA'
+	print len(YA)
+	YA_train=np.array(YA[:4498])
+	YA_test = np.array(YA[4498:])
+	YY_train=np.array(YY[:4498])
+	YY_test = np.array(YY[4498:])
+	print 'len of Y'
+	print len(np.where(YA_train==0)[0])
+	print len(np.where(YA_train==1)[0])
+	print len(np.where(YA_train==2)[0])
+	'''
+	print X.shape
+	print X_train.shape
+	print X_test.shape
+	print Y_train.shape
+	print Y_test.shape
+	'''
+	
+	# Classification
+	#classify(np.array(X_train),np.array(X_test),YA_train)
+	classify(X_train,X_test,YY_train)
+
+#------------------------------------------------------------------------------------------------------------------------------
+def classify(X_train,X_test,Y_train):
+	#skf=StratifiedKFold(Y_train, n_folds=2, random_state=1)
+	#max_no=-1
+	#min_mt = 100000
+	#for c in np.linspace(.001,10,10):
+	#	prec=np.zeros(3)
+	#	rec=np.zeros(3)
+	#	fmes=np.zeros(3)
+	#	#print c
+	#	for i,(train,test) in enumerate(skf):
+	#		#print len(np.where(Y_train[train]==0)[0])
+	#		#print len(np.where(Y_train[train]==1)[0])
+	#		#print len(np.where(Y_train[train]==2)[0])
+	#		X_train1=X_train[train,:]
+	#		X_test1=X_train[test,:]
+	#		Y_train1=Y_train[train]
+	#		Y_test1=Y_train[test]
+	#		# SVM
+	#		clf = svm.SVR(C=c,degree=2)
+        #                clf.fit(X_train1, Y_train1)
+        #                #clf = linear_model.LogisticRegression(C=1)
+        #                #clf.fit(X_train1, Y_train1)
+        #                pred_train=clf.predict(X_train1)
+        #                pred_test=clf.predict(X_test1)
+        #                m = mean_squared_error(pred_train, Y_train1)
+        #                mt = mean_squared_error(pred_test, Y_test1)
+        #                print str(mt)+'  '+str(c)
+        #        #print sum(prec)/15.0,sum(rec)/15.0,
+        #        if mt < min_mt:
+        #                min_mt=mt
+        #                max_c=c
+
+		#print sum(fmes)/15.0
+		#print [j/5 for j in prec],[j/5 for j in rec],[j/5 for j in fmes]
+	#print max_no,max_c
+	f2 = open('test','w')
+        clf = svm.LinearSVC(C=1.0
+        clf.fit(X_train, Y_train)
+        p = clf.predict(X_test)
+	p = np.around(p);
+        i = 5001
+        for k in p:
+                f2.write(str(i)+'\t'+str(k)+'\n')
+                i =i+1
+
+	
+if __name__ == '__main__':
+	main()
